@@ -1,4 +1,4 @@
-"""Drive distance, free-flow time and bridge tolls from each tract centroid to each airport terminal."""
+"""Drive distance, free-flow time and bridge tolls from each tract centroid to each airport."""
 
 import os
 
