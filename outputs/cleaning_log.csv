@@ -5,4 +5,10 @@ blocks,inside airport,82210,82,not on airport land
 lodes,work at airport,16241068,19631,workplace not an airport block
 airport_workers,home in 9 counties,6719,3768,"4,072 of 22,702 workers live outside the 9 counties"
 tracts,drop zero population,1772,1763,POP20 = 0
-road_network,largest connected component,729478,726851,node in one of 714 small pieces not connected to the main network
+gtfs_stops,inside airport,19802,49,stop not on airport land
+gtfs_stops,drop Santa Clara rail,49,47,"rail platform inside the SJC polygon, still a bus ride from the terminals"
+gtfs_trips,add overnight trips for 2026-10-28,87764,88633,trip from the night before still running after midnight
+gtfs_trips,add overnight trips for 2026-11-08,87764,88607,trip from the night before still running after midnight
+transit,reaches airport by 9 am,10578,7603,no transit trip leaving at 2 am reaches the airport by 9 am
+road_network,public roads only,1749823,1267864,"edge is a footpath, parking aisle, driveway, or private/no-access road"
+road_network,largest connected component,729478,539070,node in one of 176939 small pieces you can't drive both into and out of

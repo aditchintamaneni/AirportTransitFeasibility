@@ -2,3 +2,5 @@ data/raw/*
 !data/raw/.gitkeep
 .venv/
 __pycache__/
+# big derived copies of the transit feed
+data/processed/*.zip

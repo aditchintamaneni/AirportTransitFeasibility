@@ -11,6 +11,13 @@ COUNTY_FIPS = ["001", "013", "041", "055", "075", "081", "085", "095", "097"]
 # Bay Area CRS we used in class
 CRS = 32610
 AIRPORTS = ["SFO", "OAK", "SJC"]
+# one non-holiday weekday in october 2026 for transit routing (from our proposal)
+SERVICE_DATE = "2026-10-28"
+# sunday scenario; skipped nov 1 since clocks change that day
+SUNDAY_DATE = "2026-11-08"
+# leave home at 2 am and count airport arrivals up to 9 am, covering early shift starts
+FIRST_DEPARTURE_HOUR = 2
+LAST_ARRIVAL_HOUR = 9
 
 cleaning_log = []
 

@@ -1,4 +1,0 @@
-dataset,step,rows_before,rows_after,reason
-gtfs_trips,runs on 2026-10-28,87764,29328,trip does not run on the service date
-airports,match airport names,8110,3,"TIGER landmark is not an SFO, OAK or SJC airport (k2457)"
-gtfs_stops,within 500 m of an airport,19802,93,"stop not near SFO, OAK or SJC"
