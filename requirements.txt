@@ -6,3 +6,4 @@ pyarrow
 jupyter
 requests
 scikit-learn
+r5py
