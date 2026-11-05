@@ -40,7 +40,6 @@ def download_gtfs():
     with open(GTFS_PATH, "wb") as file:
         for chunk in response.iter_content(chunk_size=1024 * 1024):
             file.write(chunk)
-    # a wrong token gets a short error message back instead of a zip
     if not zipfile.is_zipfile(GTFS_PATH):
         os.remove(GTFS_PATH)
         raise ValueError("511 sent back an error instead of the feed; check your token")
@@ -83,7 +82,7 @@ def airport_stops(airports):
 
 
 def hours(times):
-    # "25:30:00" -> 25
+    # "25:30:00" becomes 25
     return times.str.split(":").str[0].astype(int)
 
 
@@ -118,7 +117,7 @@ def add_overnight_trips(days=(SERVICE_DATE, SUNDAY_DATE)):
         new_stop_times.append(rows)
         new_dates.append(pd.DataFrame({"service_id": ["overnight_" + date], "date": [date], "exception_type": ["1"]}))
 
-    # write a copy of the feed with the new rows added to the end of each table
+    # write a copy of the feed w the new rows added to the end of each table
     extra = {"trips.txt": pd.concat(new_trips), "stop_times.txt": pd.concat(new_stop_times), "calendar_dates.txt": pd.concat(new_dates)}
     with zipfile.ZipFile(GTFS_PATH) as feed, zipfile.ZipFile(OVERNIGHT_GTFS_PATH, "w") as out:
         for name in feed.namelist():
@@ -137,7 +136,7 @@ def transit_network(gtfs_path=OVERNIGHT_GTFS_PATH):
 
 
 def transit_times(network, centroids, stops, departure, window=datetime.timedelta(minutes=1), max_time=datetime.timedelta(hours=3)):
-    """fastest transit + walking minutes from each tract centroid to each airport; with a window, the typical (median) trip over departures in it."""
+    """transit minutes from each tract centroid to each airport; a window gives the median over departures in it"""
     origins = centroids.to_crs(4326).rename(columns={"GEOID": "id"})[["id", "geometry"]]
     destinations = stops.to_crs(4326).rename(columns={"stop_id": "id"})[["id", "geometry"]].drop_duplicates("id")
     # travel time includes walking to the stop and waiting there
@@ -158,8 +157,8 @@ def transit_times(network, centroids, stops, departure, window=datetime.timedelt
 
 
 def transit_trip_times(network, centroids, stops):
-    """typical weekday transit minutes to each airport leaving home 4-5 am (early shift) and 7-8 am (normal commute), to compare with driving."""
-    # takes ~20 min, so reuse the saved result; delete the file to recompute
+    """typical transit minutes to each airport leaving 4-5 am and 7-8 am, to compare with driving"""
+    # cached, delete the file to recompute
     path = f"{PROCESSED_DIR}/transit_trip_times.csv"
     if os.path.exists(path):
         return pd.read_csv(path, dtype={"GEOID": str})
@@ -182,8 +181,6 @@ def earliest_arrival(network, centroids, stops):
     else:
         results = []
         for day in [SERVICE_DATE, SUNDAY_DATE]:
-            # leaving later never gets you there sooner (you could just wait), so one 2 am departure finds the earliest arrival
-            # (on 40 sample tracts this matched leaving every 10 min from 2 to 9 am exactly)
             start = datetime.datetime.fromisoformat(day) + datetime.timedelta(hours=FIRST_DEPARTURE_HOUR)
             times = transit_times(network, centroids, stops, start, max_time=datetime.timedelta(hours=LAST_ARRIVAL_HOUR - FIRST_DEPARTURE_HOUR))
             times["day"] = day
@@ -195,6 +192,6 @@ def earliest_arrival(network, centroids, stops):
         first["arrival"] = (first["arrival_min"] // 60).map("{:02.0f}".format, na_action="ignore") + ":" + (first["arrival_min"] % 60).map("{:02.0f}".format, na_action="ignore")
         first.to_csv(path, index=False)
 
-    # tracts with no trip stay in as blanks, so they're counted rather than dropped
+    # tracts w no trip stay in as blanks, so they're counted rather than dropped
     log_step("transit", "reaches airport by 9 am", len(first), first["arrival_min"].notna().sum(), "no transit trip leaving at 2 am reaches the airport by 9 am")
     return first
