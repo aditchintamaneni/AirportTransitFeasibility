@@ -1,4 +1,4 @@
-"""Rate-card fare baseline, a sample of tracts to collect real quotes for, and the fare regression."""
+"""Rate-card fare baseline, a sample of tracts to collect real quotes for, and the fare regression model."""
 
 import numpy as np
 import pandas as pd
