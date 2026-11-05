@@ -5,3 +5,4 @@ blocks,inside airport,82210,82,not on airport land
 lodes,work at airport,16241068,19631,workplace not an airport block
 airport_workers,home in 9 counties,6719,3768,"4,072 of 22,702 workers live outside the 9 counties"
 tracts,drop zero population,1772,1763,POP20 = 0
+road_network,largest connected component,729478,726851,node in one of 714 small pieces not connected to the main network
