@@ -3,8 +3,20 @@
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+from shapely.geometry import LineString
 
 from src.config import CRS, PROCESSED_DIR, log_step
+
+# bridge screenlines (lon, lat) drawn across open water mid span, the tolled direction, and the 2026 2-axle FasTrak toll 
+# Carquinez, Benicia-Martinez and Antioch are tolled northbound only, so trips toward the airports never pay them
+BRIDGES = {
+    "bay_bridge": (LineString([(-122.377, 37.790), (-122.377, 37.812)]), "west", 8.50),
+    "san_mateo": (LineString([(-122.200, 37.560), (-122.200, 37.640)]), "west", 8.50),
+    "dumbarton": (LineString([(-122.115, 37.490), (-122.115, 37.520)]), "west", 8.50),
+    "richmond_san_rafael": (LineString([(-122.440, 37.915), (-122.440, 37.960)]), "west", 8.50),
+    "golden_gate": (LineString([(-122.490, 37.820), (-122.465, 37.820)]), "south", 10.25),
+}
+FREEWAY = {"motorway", "motorway_link", "trunk", "trunk_link"}
 
 # road types people cannot drive on
 NOT_DRIVABLE = {"cycleway", "pedestrian", "busway", "construction", "footway", "track", "path", "steps"}
@@ -69,19 +81,51 @@ def shortest_route(G, start_lon, start_lat, end_lon, end_lat):
     return ox.routing.route_to_gdf(G, route)[["geometry"]].to_crs(CRS).reset_index(drop=True)
 
 
-def drive_times(G, centroids, stops):
-    """free-flow drive minutes from every tract centroid to each airport's terminal curb."""
-    # snap all centroids to their nearest road node at once
-    xy = centroids.to_crs(4326).get_coordinates()
-    origin_nodes = ox.distance.nearest_nodes(G, xy["x"], xy["y"])
+def toll_edges(G):
+    """edges that cross a bridge screenline in the tolled direction -> (bridge, toll)"""
+    x, y = nx.get_node_attributes(G, "x"), nx.get_node_attributes(G, "y")
+    tolls = {}
+    for name, (line, direction, toll) in BRIDGES.items():
+        west, south, east, north = line.bounds
+        for u, v, key, data in G.edges(keys=True, data=True):
+            # cheap box check before the geometry test
+            if min(x[u], x[v]) > east or max(x[u], x[v]) < west or min(y[u], y[v]) > north or max(y[u], y[v]) < south:
+                continue
+            if data.get("geometry", LineString([(x[u], y[u]), (x[v], y[v])])).intersects(line):
+                tolled = x[v] < x[u] if direction == "west" else y[v] < y[u]
+                if tolled:
+                    tolls[(u, v, key)] = (name, toll)
+    return tolls
 
-    results = []
+
+def drive_times(G, centroids, stops):
+    """free-flow drive minutes, miles and bridge tolls from every tract centroid to each airport's terminal curb."""
+    # snap centroids to nodes off freeways, so one dropped onto a bridge approach doesn't get a phantom toll (Matt T)
+    pickup = {n for u, v, hw in G.edges(data="highway") if not as_set(hw) <= FREEWAY for n in (u, v)}
+    xy = centroids.to_crs(4326).get_coordinates()
+    origin_nodes = ox.distance.nearest_nodes(G.subgraph(pickup), xy["x"], xy["y"])
+    tolls = toll_edges(G)
+    reverse = G.reverse(copy=False)
+
+    rows = []
     for code, stop_name in TERMINAL_STOPS.items():
         terminal = stops[(stops["code"] == code) & (stops["stop_name"] == stop_name)].to_crs(4326).geometry.iloc[0]
         target = ox.distance.nearest_nodes(G, terminal.x, terminal.y)
-        seconds = nx.single_source_dijkstra_path_length(G.reverse(copy=False), target, weight="travel_time")
-        results.append(pd.DataFrame({"GEOID": centroids["GEOID"].values, "code": code, "drive_min": [seconds[node] / 60 for node in origin_nodes]}))
+        # one search out from the terminal on the reversed graph gives every node's time to the terminal and its next hop toward it
+        next_hop, seconds = nx.dijkstra_predecessor_and_distance(reverse, target, weight="travel_time")
+        for geoid, origin in zip(centroids["GEOID"], origin_nodes):
+            # walk the route to add up miles and tolls
+            node, meters, toll, bridges = origin, 0.0, 0.0, []
+            while node != target:
+                nxt = next_hop[node][0]
+                key, data = min(G[node][nxt].items(), key=lambda kv: kv[1]["travel_time"])
+                meters += data["length"]
+                if (node, nxt, key) in tolls:
+                    bridges.append(tolls[(node, nxt, key)][0])
+                    toll += tolls[(node, nxt, key)][1]
+                node = nxt
+            rows.append({"GEOID": geoid, "code": code, "drive_min": seconds[origin] / 60, "miles": meters / 1609.344, "toll": toll, "bridges": ";".join(bridges)})
 
-    times = pd.concat(results)
+    times = pd.DataFrame(rows)
     times.to_csv(f"{PROCESSED_DIR}/drive_times.csv", index=False)
     return times
