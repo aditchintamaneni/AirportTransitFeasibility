@@ -48,4 +48,6 @@ Entered by hand: the Lyft rate cards for Nov 2026 (Silicon Valley from a Lyft dr
 | `transit_vs_drive.csv` | the transit and drive minutes above side by side, for the comparison charts | `data_processing.ipynb` |
 | `quoted_fares.csv` | the 120 tracts sampled for Lyft app quotes, w/ the price columns still blank | `src/fares.py` |
 | `bay_area_drive.graphml` | the 9-county drive network (git LFS, 830 MB) | locally via CLI |
+| `outputs/cleaning_log.csv` | rows before and after every filter in the pipeline, w/ the reason | `src/config.py` |
+| `outputs/transit_reach_within_minutes.csv` | share of tracts and workers w/ a transit trip of at most 30, 60 or 90 minutes, by airport and departure window | `visualizations.ipynb` |
 | `511_gtfs_overnight.zip` | the 511 feed w/ the night before's after-midnight trips copied onto each day (git-ignored, rebuilt each run) | `src/transit.py` |
